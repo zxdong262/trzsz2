@@ -28,6 +28,7 @@ export default defineConfig({
     sourcemap: true,
     minify: false,
     rollupOptions: {
+      external: ['pako', 'ts-md5'],
       output: {
         format: 'cjs',
         exports: 'named'
