@@ -1,0 +1,21 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "target": "ES2018",
+    "module": "CommonJS",
+    "outDir": "./dist",
+    "lib": ["ES2018", "DOM"],
+    "moduleResolution": "node"
+  },
+  "include": [
+    "src/**/*",
+    "test/**/*",
+    "build/**/*",
+    "vitest.config.ts"
+  ]
+  ,
+  "exclude": [
+    "node_modules",
+    "dist"
+  ]
+}

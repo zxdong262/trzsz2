@@ -1,0 +1,21 @@
+# Docker Compose for trzsz integration test server
+# SSH access: zxd:zxd@localhost:24455
+
+services:
+  trzsz-test-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: trzsz-test-server
+    ports:
+      - "24455:22"
+    volumes:
+      # Mount downloads directory for file transfer testing
+      - ./downloads:/home/zxd/downloads
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "pgrep", "sshd"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
