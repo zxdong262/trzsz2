@@ -20,7 +20,7 @@ import {
   isVT100End,
   trzszVersion,
   TmuxMode
-} from '../../src/comm'
+} from '../../src/lib/comm'
 
 describe('trzszVersion', () => {
   test('should have a version', () => {
@@ -220,7 +220,7 @@ describe('TrzszError', () => {
 })
 
 describe('checkDuplicateNames', () => {
-  const createFile = (path: string[]): import('../../src/comm').TrzszFileReader => ({
+  const createFile = (path: string[]): import('../../src/lib/comm').TrzszFileReader => ({
     getPathId: () => 0,
     getRelPath: () => path,
     isDir: () => true,

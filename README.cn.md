@@ -48,11 +48,17 @@ npm run test:download
 npm run test:watch
 ```
 
-## 待办事项
+## Web 示例
 
-- [ ] 浏览器使用文档和示例
-- [ ] 浏览器环境测试和演示
-- [ ] WebRTC 数据通道集成示例
+项目包含一个位于 `src/web` 的网页示例，演示了在浏览器中使用 xterm.js 的用法。
+
+```bash
+# 启动服务器（用于 SSH 连接的后端）
+npm run server
+
+# 启动开发服务器（前端，支持热重载）
+npm run dev:web
+```
 
 ## 相关项目
 

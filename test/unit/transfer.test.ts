@@ -5,8 +5,8 @@
  */
 
 import { describe, test, expect, beforeEach } from 'vitest'
-import { TrzszTransfer } from '../../src/transfer'
-import { TrzszError, encodeBuffer, decodeBuffer } from '../../src/comm'
+import { TrzszTransfer } from '../../src/lib/transfer'
+import { TrzszError, encodeBuffer, decodeBuffer } from '../../src/lib/comm'
 
 describe('TrzszTransfer', () => {
   let output: Array<string | Uint8Array>

@@ -5,7 +5,7 @@
  */
 
 import { describe, test, expect } from 'vitest'
-import { TrzszBuffer } from '../../src/buffer'
+import { TrzszBuffer } from '../../src/lib/buffer'
 
 describe('TrzszBuffer', () => {
   describe('readLine', () => {

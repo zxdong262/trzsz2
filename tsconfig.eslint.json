@@ -8,7 +8,7 @@
     "moduleResolution": "node"
   },
   "include": [
-    "src/**/*",
+    "src/lib/*",
     "test/**/*",
     "build/**/*",
     "vitest.config.ts"

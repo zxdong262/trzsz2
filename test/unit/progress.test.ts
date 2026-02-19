@@ -5,7 +5,7 @@
  */
 
 import { describe, test, expect, beforeEach } from 'vitest'
-import { TextProgressBar, getEllipsisString } from '../../src/progress'
+import { TextProgressBar, getEllipsisString } from '../../src/lib/progress'
 
 describe('getEllipsisString', () => {
   test('should return string with ellipsis', () => {

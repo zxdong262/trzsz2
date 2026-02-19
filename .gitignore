@@ -120,3 +120,4 @@ ftp-root
 *.asc
 /electron-builder.json
 *.bin
+/web/*.log

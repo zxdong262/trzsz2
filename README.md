@@ -54,11 +54,17 @@ npm run test:download
 npm run test:watch
 ```
 
-## TODO
+## Web Demo
 
-- [ ] Browser usage documentation and examples
-- [ ] Browser environment testing and demos
-- [ ] WebRTC data channel integration example
+The project includes a web demo located in `src/web` that demonstrates browser usage with xterm.js.
+
+```bash
+# Start the server (backend for SSH connections)
+npm run server
+
+# Start the development server (frontend with hot reload)
+npm run dev:web
+```
 
 ## Related Projects
 

@@ -5,8 +5,8 @@
  */
 
 import { describe, test, expect } from 'vitest'
-import { getEscapeChars, escapeCharsToCodes, escapeData, unescapeData } from '../../src/escape'
-import { strToUint8 } from '../../src/comm'
+import { getEscapeChars, escapeCharsToCodes, escapeData, unescapeData } from '../../src/lib/escape'
+import { strToUint8 } from '../../src/lib/comm'
 
 describe('getEscapeChars', () => {
   test('should return basic escape chars when escapeAll is false', () => {

@@ -10,7 +10,7 @@ import dts from 'vite-plugin-dts'
 export default defineConfig({
   plugins: [
     dts({
-      include: ['src/**/*'],
+      include: ['src/lib/*'],
       outDir: 'dist/cjs-full',
       entryRoot: 'src',
       rollupTypes: false,
@@ -19,7 +19,7 @@ export default defineConfig({
   ],
   build: {
     lib: {
-      entry: resolve(__dirname, '../src/index.ts'),
+      entry: resolve(__dirname, '../src/lib/index.ts'),
       formats: ['cjs'],
       fileName: () => 'index.cjs'
     },
