@@ -70,6 +70,7 @@ npm run dev:web
 
 - [trzsz-js](https://github.com/trzsz/trzsz.js) - Original trzsz implementation with file system support by Lonny Wong
 - [trzsz](https://github.com/trzsz/trzsz) - The main trzsz project
+- [electerm](https://github.com/electerm/electerm) - Terminal/SSH/SFTP/FTP/Serial/VNC/RDP/Spice/Telnet client using this lib
 
 ## License
 

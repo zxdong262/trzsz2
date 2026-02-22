@@ -64,6 +64,7 @@ npm run dev:web
 
 - [trzsz-js](https://github.com/trzsz/trzsz.js) - Lonny Wong 开发的原始 trzsz 实现，包含文件系统支持
 - [trzsz](https://github.com/trzsz/trzsz) - trzsz 主项目
+- [electerm](https://github.com/electerm/electerm) - 支持 trzsz 的终端/SSH/SFTP/FTP/Serial/VNC/RDP/Spice/Telnet 客户端, 使用trzsz2实现
 
 ## 许可证
 
