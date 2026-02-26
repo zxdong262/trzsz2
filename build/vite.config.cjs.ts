@@ -5,18 +5,10 @@
 
 import { defineConfig } from 'vite'
 import { resolve } from 'path'
-import dts from 'vite-plugin-dts'
 
 export default defineConfig({
-  plugins: [
-    dts({
-      include: ['src/lib/*'],
-      outDir: 'dist/cjs',
-      entryRoot: 'src',
-      rollupTypes: false,
-      tsconfigPath: './tsconfig.json'
-    })
-  ],
+  plugins: [],
+
   build: {
     lib: {
       entry: resolve(__dirname, '../src/lib/index.ts'),

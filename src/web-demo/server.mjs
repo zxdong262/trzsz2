@@ -4,6 +4,7 @@ import { Client } from 'ssh2'
 import fs from 'fs'
 import path from 'path'
 import cors from 'cors'
+import { getSshConnectOptions } from '../../test/integration/common.mjs'
 
 const app = express()
 expressWs(app)
@@ -17,11 +18,6 @@ app.use(cors({
 
 // Middleware to parse JSON bodies
 app.use(express.json())
-
-const SSH_HOST = 'localhost'
-const SSH_PORT = 24455
-const SSH_USER = 'zxd'
-const SSH_PASS = 'zxd'
 
 // Log file setup
 const LOG_DIR = 'test/web'
@@ -111,12 +107,7 @@ testSsh.on('ready', () => {
 testSsh.on('error', (err) => {
   logToServer(`SSH test connection failed: ${err.message}`, 'ERROR')
 })
-testSsh.connect({
-  host: SSH_HOST,
-  port: SSH_PORT,
-  username: SSH_USER,
-  password: SSH_PASS
-})
+testSsh.connect(getSshConnectOptions())
 
 app.ws('/terminal', (ws, req) => {
   const clientIp = req.connection.remoteAddress
@@ -178,12 +169,7 @@ app.ws('/terminal', (ws, req) => {
     ws.close(1011, 'SSH connection failed')
   })
 
-  ssh.connect({
-    host: SSH_HOST,
-    port: SSH_PORT,
-    username: SSH_USER,
-    password: SSH_PASS
-  })
+  ssh.connect(getSshConnectOptions())
 
   ws.on('close', () => {
     logToServer('WebSocket closed')

@@ -65,12 +65,6 @@ function createPackageJsonFiles () {
     JSON.stringify({ type: 'module' }, null, 2)
   )
 
-  // CJS package.json
-  writeFileSync(
-    join(distDir, 'cjs', 'package.json'),
-    JSON.stringify({ type: 'commonjs' }, null, 2)
-  )
-
   // CJS-full package.json
   writeFileSync(
     join(distDir, 'cjs-full', 'package.json'),
@@ -136,7 +130,6 @@ try {
 
   // Run all Vite builds
   runViteBuild('build/vite.config.esm.ts', 'ESM')
-  runViteBuild('build/vite.config.cjs.ts', 'CJS')
   runViteBuild('build/vite.config.cjs-full.ts', 'CJS-full')
   runViteBuild('build/vite.config.browser.ts', 'Browser')
 
@@ -152,7 +145,6 @@ try {
   console.log('✅ Build complete!')
   console.log('\nOutput directories:')
   console.log('  - dist/esm       : ES modules (tree-shakeable)')
-  console.log('  - dist/cjs       : CommonJS modules')
   console.log('  - dist/cjs-full  : CommonJS bundle (all dependencies included)')
   console.log('  - dist/browser   : Browser bundle (IIFE format)')
 } catch (error) {

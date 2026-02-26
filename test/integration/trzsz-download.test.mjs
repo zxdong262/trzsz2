@@ -20,15 +20,7 @@ import { Client } from 'ssh2'
 import { existsSync, mkdirSync } from 'fs'
 import { join } from 'path'
 import { TrzszSession } from './trzsz-session.mjs'
-
-// SSH connection configuration
-const SSH_CONFIG = {
-  host: 'localhost',
-  port: 24455,
-  username: 'zxd',
-  password: 'zxd',
-  readyTimeout: 30000
-}
+import { SSH_CONFIG } from './common.mjs'
 
 // Download directory
 const DOWNLOAD_DIR = join(process.cwd(), 'test/integration/downloads')
@@ -189,12 +181,21 @@ async function runTest () {
             // tsz command on server means server will send the specified file
             console.log('\n=== Test: tsz command (download) ===')
             console.log('[TEST] Sending tsz command to trigger download...')
+
+            // Record start time
+            const startTime = Date.now()
             stream.write(`tsz ${DOWNLOAD_FILE_NAME}\n`)
 
             // Wait for download to complete with timeout
             try {
               await waitForComplete(session, 180000)
               console.log('[TEST] Download session complete')
+
+              // Calculate transfer speed
+              const endTime = Date.now()
+              const durationSeconds = (endTime - startTime) / 1000
+              const speedMbps = (TEST_FILE_SIZE / durationSeconds) / (1024 * 1024)
+              console.log(`[TEST] Download speed: ${speedMbps.toFixed(2)} MB/s`)
             } catch (e) {
               console.log('[TEST] Download timeout or error:', e.message)
             }
