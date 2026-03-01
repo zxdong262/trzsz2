@@ -149,6 +149,9 @@ class TerminalProgress implements ProgressCallback {
   private fileSize: number = 0
   private fileNum: number = 0
   private currentStep: number = 0
+  private startTime: number = 0
+  private lastStep: number = 0
+  private lastTime: number = 0
 
   constructor (term: Terminal) {
     this.term = term
@@ -162,6 +165,9 @@ class TerminalProgress implements ProgressCallback {
   onName (name: string): void {
     this.fileName = name
     this.term.writeln(`\r\nFile: ${name}`)
+    this.startTime = Date.now()
+    this.lastStep = 0
+    this.lastTime = this.startTime
   }
 
   onSize (size: number): void {
@@ -174,9 +180,23 @@ class TerminalProgress implements ProgressCallback {
   onStep (step: number): void {
     this.currentStep = step
     const percent = this.fileSize > 0 ? Math.round((step / this.fileSize) * 100) : 0
+
+    // Calculate speed
+    const now = Date.now()
+    const timeDiff = now - this.lastTime
+    const stepDiff = step - this.lastStep
+    let speedStr = ''
+
+    if (timeDiff > 500 && stepDiff > 0) {
+      const speed = (stepDiff / timeDiff) * 1000 // bytes per second
+      speedStr = ` ${this.formatSize(speed)}/s`
+      this.lastStep = step
+      this.lastTime = now
+    }
+
     const doneStr = this.formatSize(step)
     const totalStr = this.formatSize(this.fileSize)
-    this.term.write(`\rProgress: ${percent}% (${doneStr}/${totalStr})`)
+    this.term.write(`\rProgress: ${percent}% (${doneStr}/${totalStr})${speedStr}`)
   }
 
   onDone (): void {
@@ -197,6 +217,7 @@ export default class AddonTrzsz {
   private term: Terminal | null = null
   private transfer: TrzszTransfer | null = null
   private onDetect: ((type: 'receive' | 'send') => void) | null = null
+  private onLog: ((message: string) => void) | null = null
   private isTransferring: boolean = false
   private pendingFiles: File[] = []
   private pendingTransferData: string = ''
@@ -209,21 +230,37 @@ export default class AddonTrzsz {
   }
 
   private log (...args: any[]): void {
-    console.log('[Trzsz]', ...args)
+    const message = args.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : String(arg)).join(' ')
+    console.log('[Trzsz]', message)
+    if (this.onLog) {
+      this.onLog(message)
+    }
   }
 
   private debug (...args: any[]): void {
     if (this.DEBUG) {
-      console.log('[Trzsz Debug]', ...args)
+      const message = args.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : String(arg)).join(' ')
+      console.log('[Trzsz Debug]', message)
+      if (this.onLog) {
+        this.onLog('[Debug] ' + message)
+      }
     }
   }
 
   private error (...args: any[]): void {
-    console.error('[Trzsz Error]', ...args)
+    const message = args.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : String(arg)).join(' ')
+    console.error('[Trzsz Error]', message)
+    if (this.onLog) {
+      this.onLog('[Error] ' + message)
+    }
   }
 
   activate (terminal: Terminal): void {
     this.term = terminal
+  }
+
+  setOnLog (callback: (message: string) => void): void {
+    this.onLog = callback
   }
 
   dispose (): void {
@@ -434,20 +471,43 @@ export default class AddonTrzsz {
       this.log('Received config:', config)
 
       // Progress callback
+      let sendStartTime = Date.now()
+      let sendLastStep = 0
+      let sendLastTime = sendStartTime
       const progress = {
         onNum: (num: number) => {
           this.term?.writeln(`\r\nSending ${num} file(s)...`)
         },
         onName: (name: string) => {
           this.term?.writeln(`\r\nFile: ${name}`)
+          sendStartTime = Date.now()
+          sendLastStep = 0
+          sendLastTime = sendStartTime
         },
         onSize: (size: number) => {
           const sizeStr = this.formatSize(size)
           this.term?.writeln(`Size: ${sizeStr}`)
         },
         onStep: (step: number) => {
-          // Could show progress here
-          this.debug(`Step: ${step}`)
+          const totalSize = files.reduce((sum, f) => sum + f.size, 0)
+          const percent = totalSize > 0 ? Math.round((step / totalSize) * 100) : 0
+
+          // Calculate speed
+          const now = Date.now()
+          const timeDiff = now - sendLastTime
+          const stepDiff = step - sendLastStep
+          let speedStr = ''
+
+          if (timeDiff > 500 && stepDiff > 0) {
+            const speed = (stepDiff / timeDiff) * 1000 // bytes per second
+            speedStr = ` ${this.formatSize(speed)}/s`
+            sendLastStep = step
+            sendLastTime = now
+          }
+
+          const doneStr = this.formatSize(step)
+          const totalStr = this.formatSize(totalSize)
+          this.term?.write(`\rProgress: ${percent}% (${doneStr}/${totalStr})${speedStr}`)
         },
         onDone: () => {
           this.term?.writeln('\r\nFile sent.')

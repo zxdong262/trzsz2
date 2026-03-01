@@ -4,7 +4,7 @@ import { resolve } from 'path'
 
 export default defineConfig({
   plugins: [react()],
-  root: 'src/web',
+  root: 'src/web-demo',
   resolve: {
     alias: {
       trzsz2: resolve(__dirname, '../lib/index.ts')

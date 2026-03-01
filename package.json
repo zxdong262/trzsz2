@@ -15,7 +15,8 @@
     "lint": "ts-standard --project tsconfig.eslint.json",
     "fix": "ts-standard --fix --project tsconfig.eslint.json",
     "start": "npm run dev:web",
-    "server": "node src/web-demo/server.mjs"
+    "server": "node src/web-demo/server.mjs",
+    "dev:web": "vite --config src/web-demo/vite.config.ts"
   },
   "keywords": [
     "trzsz",

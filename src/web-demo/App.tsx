@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { Terminal } from '@xterm/xterm'
 import { WebLinksAddon } from '@xterm/addon-web-links'
 import '@xterm/xterm/css/xterm.css'
@@ -9,6 +9,7 @@ const App: React.FC = () => {
   const terminal = useRef<Terminal | null>(null)
   const ws = useRef<WebSocket | null>(null)
   const trzszAddon = useRef<AddonTrzsz | null>(null)
+  const [logs, setLogs] = useState<string[]>([])
 
   useEffect(() => {
     if (terminalRef.current == null) return
@@ -26,6 +27,13 @@ const App: React.FC = () => {
 
     const addon = new AddonTrzsz()
     trzszAddon.current = addon
+
+    // Set up log callback to display logs in the bottom div
+    addon.setOnLog((message) => {
+      const timestamp = new Date().toLocaleTimeString()
+      setLogs(prev => [...prev, `[${timestamp}] ${message}`])
+    })
+
     term.loadAddon(addon as any)
 
     term.open(terminalRef.current)
@@ -118,8 +126,25 @@ const App: React.FC = () => {
   }
 
   return (
-    <div style={{ width: '100vw', height: '100vh', backgroundColor: '#1e1e1e' }}>
-      <div ref={terminalRef} style={{ width: '100%', height: '100%' }} />
+    <div style={{ width: '100vw', height: '100vh', backgroundColor: '#1e1e1e', display: 'flex', flexDirection: 'column' }}>
+      <div ref={terminalRef} style={{ flex: 1, minHeight: 0 }} />
+      <div
+        style={{
+          height: '200px',
+          backgroundColor: '#0d0d0d',
+          borderTop: '1px solid #333',
+          overflow: 'auto',
+          padding: '8px',
+          fontFamily: 'Menlo, Monaco, "Courier New", monospace',
+          fontSize: '12px',
+          color: '#ccc'
+        }}
+      >
+        <div style={{ marginBottom: '4px', color: '#888' }}>--- Transfer Logs ---</div>
+        {logs.map((log, index) => (
+          <div key={index} style={{ marginBottom: '2px' }}>{log}</div>
+        ))}
+      </div>
     </div>
   )
 }
