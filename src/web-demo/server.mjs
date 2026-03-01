@@ -1,6 +1,6 @@
 import express from 'express'
 import expressWs from 'express-ws'
-import { Client } from 'ssh2'
+import { Client } from '@electerm/ssh2'
 import fs from 'fs'
 import path from 'path'
 import cors from 'cors'

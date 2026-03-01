@@ -15,7 +15,7 @@
  * - Does NOT delete files after test
  */
 
-import { Client } from 'ssh2'
+import { Client } from '@electerm/ssh2'
 import { writeFileSync, statSync } from 'fs'
 import { join } from 'path'
 import { TrzszSession } from './trzsz-session.mjs'

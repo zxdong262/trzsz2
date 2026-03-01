@@ -145,6 +145,7 @@ const openSaveFile = async (
  */
 class TerminalProgress implements ProgressCallback {
   private readonly term: Terminal
+  private readonly onLog: ((message: string) => void) | null
   private fileName: string = ''
   private fileSize: number = 0
   private fileNum: number = 0
@@ -153,18 +154,29 @@ class TerminalProgress implements ProgressCallback {
   private lastStep: number = 0
   private lastTime: number = 0
 
-  constructor (term: Terminal) {
+  constructor (term: Terminal, onLog: ((message: string) => void) | null = null) {
     this.term = term
+    this.onLog = onLog
+  }
+
+  private logToDiv (message: string): void {
+    if (this.onLog) {
+      this.onLog(message)
+    }
   }
 
   onNum (num: number): void {
     this.fileNum = num
-    this.term.writeln(`\r\nReceiving ${num} file(s)...`)
+    const msg = `Receiving ${num} file(s)...`
+    this.term.writeln(`\r\n${msg}`)
+    this.logToDiv(msg)
   }
 
   onName (name: string): void {
     this.fileName = name
-    this.term.writeln(`\r\nFile: ${name}`)
+    const msg = `File: ${name}`
+    this.term.writeln(`\r\n${msg}`)
+    this.logToDiv(msg)
     this.startTime = Date.now()
     this.lastStep = 0
     this.lastTime = this.startTime
@@ -174,7 +186,9 @@ class TerminalProgress implements ProgressCallback {
     this.fileSize = size
     this.currentStep = 0
     const sizeStr = this.formatSize(size)
-    this.term.writeln(`Size: ${sizeStr}`)
+    const msg = `Size: ${sizeStr}`
+    this.term.writeln(msg)
+    this.logToDiv(msg)
   }
 
   onStep (step: number): void {
@@ -196,11 +210,15 @@ class TerminalProgress implements ProgressCallback {
 
     const doneStr = this.formatSize(step)
     const totalStr = this.formatSize(this.fileSize)
-    this.term.write(`\rProgress: ${percent}% (${doneStr}/${totalStr})${speedStr}`)
+    const msg = `Progress: ${percent}% (${doneStr}/${totalStr})${speedStr}`
+    this.term.write(`\r${msg}`)
+    this.logToDiv(msg)
   }
 
   onDone (): void {
-    this.term.writeln(`\r\nFile "${this.fileName}" saved successfully.`)
+    const msg = `File "${this.fileName}" saved successfully.`
+    this.term.writeln(`\r\n${msg}`)
+    this.logToDiv(msg)
   }
 
   private formatSize (bytes: number): string {
@@ -252,6 +270,21 @@ export default class AddonTrzsz {
     console.error('[Trzsz Error]', message)
     if (this.onLog) {
       this.onLog('[Error] ' + message)
+    }
+  }
+
+  private termLog (message: string, writeToTerm: boolean = true): void {
+    if (this.onLog) {
+      this.onLog(message)
+    }
+    if (writeToTerm && this.term) {
+      this.term.writeln(message)
+    }
+  }
+
+  private termWrite (message: string): void {
+    if (this.term) {
+      this.term.write(message)
     }
   }
 
@@ -406,19 +439,19 @@ export default class AddonTrzsz {
       const config = await this.transfer.recvConfig()
       this.log('Received config:', config)
 
-      const progress = new TerminalProgress(this.term)
+      const progress = new TerminalProgress(this.term, this.onLog)
       const localNames = await this.transfer.recvFiles(null, openSaveFile, progress)
 
       this.log('Files received:', localNames)
       await this.transfer.clientExit('Success')
 
-      this.term.writeln('\r\nTransfer complete.')
+      this.termLog('Transfer complete.')
     } catch (e) {
       this.error('Receive transfer error:', e)
       if (this.transfer) {
         await this.transfer.clientError(e as Error)
       }
-      this.term?.writeln(`\r\nTransfer error: ${(e as Error).message}`)
+      this.termLog(`Transfer error: ${(e as Error).message}`)
     } finally {
       this.isTransferring = false
       this.transfer?.cleanup()
@@ -448,7 +481,7 @@ export default class AddonTrzsz {
     })
 
     try {
-      this.term.writeln(`\r\nSending ${files.length} file(s)...`)
+      this.termLog(`Sending ${files.length} file(s)...`)
 
       // Add any pending data that was received before file selection
       if (this.pendingTransferData) {
@@ -476,17 +509,23 @@ export default class AddonTrzsz {
       let sendLastTime = sendStartTime
       const progress = {
         onNum: (num: number) => {
-          this.term?.writeln(`\r\nSending ${num} file(s)...`)
+          const msg = `Sending ${num} file(s)...`
+          this.term?.writeln(`\r\n${msg}`)
+          this.termLog(msg, false)
         },
         onName: (name: string) => {
-          this.term?.writeln(`\r\nFile: ${name}`)
+          const msg = `File: ${name}`
+          this.term?.writeln(`\r\n${msg}`)
+          this.termLog(msg, false)
           sendStartTime = Date.now()
           sendLastStep = 0
           sendLastTime = sendStartTime
         },
         onSize: (size: number) => {
           const sizeStr = this.formatSize(size)
-          this.term?.writeln(`Size: ${sizeStr}`)
+          const msg = `Size: ${sizeStr}`
+          this.term?.writeln(msg)
+          this.termLog(msg, false)
         },
         onStep: (step: number) => {
           const totalSize = files.reduce((sum, f) => sum + f.size, 0)
@@ -507,10 +546,14 @@ export default class AddonTrzsz {
 
           const doneStr = this.formatSize(step)
           const totalStr = this.formatSize(totalSize)
-          this.term?.write(`\rProgress: ${percent}% (${doneStr}/${totalStr})${speedStr}`)
+          const msg = `Progress: ${percent}% (${doneStr}/${totalStr})${speedStr}`
+          this.term?.write(`\r${msg}`)
+          this.termLog(msg, false)
         },
         onDone: () => {
+          const msg = 'File sent.'
           this.term?.writeln('\r\nFile sent.')
+          this.termLog(msg, false)
         }
       }
 
@@ -520,13 +563,13 @@ export default class AddonTrzsz {
       // Send EXIT to signal completion
       await this.transfer.clientExit('Success')
 
-      this.term.writeln('\r\nUpload complete.')
+      this.termLog('Upload complete.')
     } catch (e) {
       this.error('Send transfer error:', e)
       if (this.transfer) {
         await this.transfer.clientError(e as Error)
       }
-      this.term?.writeln(`\r\nUpload error: ${(e as Error).message}`)
+      this.termLog(`Upload error: ${(e as Error).message}`)
     } finally {
       this.isTransferring = false
       this.transfer?.cleanup()
