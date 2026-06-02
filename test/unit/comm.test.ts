@@ -7,6 +7,7 @@
 import { describe, test, expect } from 'vitest'
 import {
   strToUint8,
+  strToUtf8,
   strToArrBuf,
   uint8ToStr,
   encodeBuffer,
@@ -52,6 +53,39 @@ describe('strToUint8', () => {
     expect(result[0]).toBe(0x00)
     expect(result[1]).toBe(0x01)
     expect(result[2]).toBe(0xFF)
+  })
+})
+
+describe('strToUtf8', () => {
+  test('should encode Chinese characters to UTF-8 bytes', () => {
+    const result = strToUtf8('中文')
+    // '中' = 0xE4 0xB8 0xAD, '文' = 0xE6 0x96 0x87
+    expect(Array.from(result)).toEqual([0xE4, 0xB8, 0xAD, 0xE6, 0x96, 0x87])
+  })
+
+  test('should encode ASCII characters correctly', () => {
+    const result = strToUtf8('abc')
+    expect(Array.from(result)).toEqual([97, 98, 99])
+  })
+
+  test('should handle empty string', () => {
+    const result = strToUtf8('')
+    expect(Array.from(result)).toEqual([])
+  })
+
+  test('should handle mixed ASCII and Chinese', () => {
+    const result = strToUtf8('file中文.txt')
+    expect(result.length).toBeGreaterThan(0)
+    // Verify round-trip
+    const decoded = new TextDecoder().decode(result)
+    expect(decoded).toBe('file中文.txt')
+  })
+
+  test('should handle various Unicode characters', () => {
+    const testStr = '你好世界'
+    const result = strToUtf8(testStr)
+    const decoded = new TextDecoder().decode(result)
+    expect(decoded).toBe(testStr)
   })
 })
 
@@ -137,6 +171,22 @@ describe('encodeBuffer and decodeBuffer', () => {
       const decoded = decodeBuffer(encoded)
       expect(decoded).toStrictEqual(strToUint8(str))
     }
+  })
+
+  test('should encode and decode Chinese characters with UTF-8', async () => {
+    const str = '中文文件名.txt'
+    const encoded = encodeBuffer(strToUtf8(str))
+    const decoded = decodeBuffer(encoded)
+    const result = await uint8ToStr(decoded, 'utf8')
+    expect(result).toBe(str)
+  })
+
+  test('should encode and decode mixed ASCII and Chinese', async () => {
+    const str = 'test_测试_file.bin'
+    const encoded = encodeBuffer(strToUtf8(str))
+    const decoded = decodeBuffer(encoded)
+    const result = await uint8ToStr(decoded, 'utf8')
+    expect(result).toBe(str)
   })
 })
 

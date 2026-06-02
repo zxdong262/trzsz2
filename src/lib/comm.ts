@@ -23,6 +23,15 @@ export function strToUint8 (str: string): Uint8Array {
 }
 
 /**
+ * Convert a string to Uint8Array using UTF-8 encoding.
+ * @param {string} str - The input string.
+ * @return {Uint8Array} The resulting UTF-8 encoded Uint8Array.
+ */
+export function strToUtf8 (str: string): Uint8Array {
+  return new TextEncoder().encode(str)
+}
+
+/**
  * Convert a Uint8Array to string.
  * @param {Uint8Array} buf - The input buffer.
  * @param {string} encoding - The encoding to use.

@@ -192,6 +192,10 @@ export class TrzszSession {
    * Create and initialize a TrzszTransfer instance.
    */
   createTransfer () {
+    // Clean up existing transfer if any
+    if (this.transfer) {
+      this.transfer.cleanup()
+    }
     this.transfer = new TrzszTransfer((data) => {
       console.log('[TRZSZ] Sending to server:', data.length, 'bytes')
       console.log('[TRZSZ] Send content:', JSON.stringify(data.toString('binary').substring(0, 200)))

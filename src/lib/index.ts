@@ -31,6 +31,7 @@ export { TextProgressBar } from './progress'
 // Export utility functions
 export {
   strToUint8,
+  strToUtf8,
   uint8ToStr,
   strToArrBuf,
   encodeBuffer,

@@ -1,6 +1,6 @@
 {
   "name": "trzsz2",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "A pure JavaScript/TypeScript implementation of trzsz protocol - file transfer similar to zmodem but more simple and efficient",
   "scripts": {
     "build": "node build/build-vite.mjs",
@@ -98,7 +98,7 @@
     "vitest": "^1.0.0"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=16.0.0"
   },
   "standard": {
     "env": [

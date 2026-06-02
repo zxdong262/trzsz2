@@ -31,6 +31,9 @@ const timestamp = Date.now()
 // File to download from server (with timestamp in name)
 const DOWNLOAD_FILE_NAME = `download_test_${timestamp}.bin`
 
+// Chinese filename for testing Unicode support
+const CHINESE_FILE_NAME = `测试文件_${timestamp}.bin`
+
 // File size (5MB)
 const TEST_FILE_SIZE = 5 * 1024 * 1024
 
@@ -165,21 +168,24 @@ async function runTest () {
             // Wait for shell to initialize
             await new Promise((_resolve) => setTimeout(_resolve, 1500))
 
-            // Create test file on server using bash commands
-            console.log('\n=== Preparing: Creating test file on server ===')
+            // Create test files on server using bash commands
+            console.log('\n=== Preparing: Creating test files on server ===')
             console.log(`[TEST] Creating file: ${DOWNLOAD_FILE_NAME} (${TEST_FILE_SIZE} bytes)`)
+            console.log(`[TEST] Creating Chinese filename file: ${CHINESE_FILE_NAME} (${TEST_FILE_SIZE} bytes)`)
 
-            // Use dd to create a file with pseudo-random content
+            // Use dd to create files with pseudo-random content
             stream.write(`dd if=/dev/urandom of=${DOWNLOAD_FILE_NAME} bs=1M count=5 2>/dev/null\n`)
             await new Promise((_resolve) => setTimeout(_resolve, 3000))
 
-            // Verify file was created
-            stream.write(`ls -la ${DOWNLOAD_FILE_NAME}\n`)
+            stream.write(`dd if=/dev/urandom of=${CHINESE_FILE_NAME} bs=1M count=5 2>/dev/null\n`)
+            await new Promise((_resolve) => setTimeout(_resolve, 3000))
+
+            // Verify files were created
+            stream.write(`ls -la ${DOWNLOAD_FILE_NAME} ${CHINESE_FILE_NAME}\n`)
             await new Promise((_resolve) => setTimeout(_resolve, 1500))
 
-            // Test: tsz command (download - server sends files)
-            // tsz command on server means server will send the specified file
-            console.log('\n=== Test: tsz command (download) ===')
+            // Test 1: tsz command with normal filename (download - server sends files)
+            console.log('\n=== Test 1: tsz command with normal filename (download) ===')
             console.log('[TEST] Sending tsz command to trigger download...')
 
             // Record start time
@@ -202,7 +208,41 @@ async function runTest () {
 
             // Wait for any remaining processing
             await new Promise((_resolve) => setTimeout(_resolve, 1000))
-            console.log('[TEST] Download test complete, state:', session.state)
+            console.log('[TEST] Download test 1 complete, state:', session.state)
+
+            // Test 2: tsz command with Chinese filename
+            console.log('\n=== Test 2: tsz command with Chinese filename (download) ===')
+            console.log('[TEST] Sending tsz command to trigger download with Chinese filename...')
+
+            // Reset session state for next test
+            session.state = 'idle'
+            session.sessionComplete = false
+            session.error = null
+            transferStarted = false
+            // Recreate transfer to reset internal state
+            session.createTransfer()
+
+            // Record start time for Chinese filename test
+            const chineseStartTime = Date.now()
+            stream.write(`tsz ${CHINESE_FILE_NAME}\n`)
+
+            // Wait for download to complete with timeout
+            try {
+              await waitForComplete(session, 180000)
+              console.log('[TEST] Chinese filename download session complete')
+
+              // Calculate transfer speed
+              const chineseEndTime = Date.now()
+              const chineseDurationSeconds = (chineseEndTime - chineseStartTime) / 1000
+              const chineseSpeedMbps = (TEST_FILE_SIZE / chineseDurationSeconds) / (1024 * 1024)
+              console.log(`[TEST] Chinese filename download speed: ${chineseSpeedMbps.toFixed(2)} MB/s`)
+            } catch (e) {
+              console.log('[TEST] Chinese filename download timeout or error:', e.message)
+            }
+
+            // Wait for any remaining processing
+            await new Promise((_resolve) => setTimeout(_resolve, 1000))
+            console.log('[TEST] Download test 2 complete, state:', session.state)
 
             // Exit shell
             stream.write('exit\n')

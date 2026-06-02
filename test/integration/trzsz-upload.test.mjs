@@ -30,6 +30,9 @@ const timestamp = Date.now()
 // File to upload to server (with timestamp in name)
 const UPLOAD_FILE_NAME = `upload_test_${timestamp}.bin`
 
+// Chinese filename for testing Unicode support
+const CHINESE_FILE_NAME = `测试文件_${timestamp}.bin`
+
 // File size (5MB)
 const TEST_FILE_SIZE = 5 * 1024 * 1024
 
@@ -84,8 +87,13 @@ async function runTest () {
   const uploadFilePath = join(UPLOAD_DIR, UPLOAD_FILE_NAME)
   generateTestFile(uploadFilePath, TEST_FILE_SIZE)
 
+  // Generate Chinese filename test file
+  const chineseFilePath = join(UPLOAD_DIR, CHINESE_FILE_NAME)
+  generateTestFile(chineseFilePath, TEST_FILE_SIZE)
+
   const fileStats = statSync(uploadFilePath)
   console.log(`Upload file: ${UPLOAD_FILE_NAME} (${fileStats.size} bytes)`)
+  console.log(`Chinese filename file: ${CHINESE_FILE_NAME} (${fileStats.size} bytes)`)
 
   const conn = new Client()
 
@@ -120,6 +128,9 @@ async function runTest () {
         })
         session.createTransfer()
 
+        // Flag to track Chinese filename test
+        session._testChinese = false
+
         let transferStarted = false
 
         stream.on('data', (data) => {
@@ -143,8 +154,12 @@ async function runTest () {
               transferStarted = true
               session.state = 'sending'
 
+              // Determine which file to upload based on test state
+              const filesToUpload = session._testChinese ? [chineseFilePath] : [uploadFilePath]
+              console.log('[TRZSZ] Uploading files:', filesToUpload)
+
               // Start upload immediately - server is waiting for response
-              session.handleUpload([uploadFilePath]).catch((err) => {
+              session.handleUpload(filesToUpload).catch((err) => {
                 console.error('[TRZSZ] Upload error:', err)
                 conn.end()
                 reject(err)
@@ -184,12 +199,11 @@ async function runTest () {
 
             // Delete existing file on server to avoid conflict
             console.log('\n=== Preparing: Delete existing file on server ===')
-            stream.write(`rm -f ${UPLOAD_FILE_NAME}\n`)
+            stream.write(`rm -f ${UPLOAD_FILE_NAME} ${CHINESE_FILE_NAME}\n`)
             await new Promise((_resolve) => setTimeout(_resolve, 1500))
 
-            // Test: trz command (upload - server receives files)
-            // trz command on server means server is ready to receive files
-            console.log('\n=== Test: trz command (upload) ===')
+            // Test 1: trz command with normal filename (upload - server receives files)
+            console.log('\n=== Test 1: trz command with normal filename (upload) ===')
             console.log('[TEST] Sending trz command to trigger upload...')
 
             // Record start time
@@ -212,7 +226,42 @@ async function runTest () {
 
             // Wait for any remaining processing
             await new Promise((_resolve) => setTimeout(_resolve, 1000))
-            console.log('[TEST] Upload test complete, state:', session.state)
+            console.log('[TEST] Upload test 1 complete, state:', session.state)
+
+            // Test 2: trz command with Chinese filename
+            console.log('\n=== Test 2: trz command with Chinese filename (upload) ===')
+            console.log('[TEST] Sending trz command to trigger upload with Chinese filename...')
+
+            // Reset session state for next test
+            session.state = 'idle'
+            session.sessionComplete = false
+            session.error = null
+            session._testChinese = true
+            transferStarted = false
+            // Recreate transfer to reset internal state
+            session.createTransfer()
+
+            // Record start time for Chinese filename test
+            const chineseStartTime = Date.now()
+            stream.write('trz\n')
+
+            // Wait for upload to complete with timeout
+            try {
+              await waitForComplete(session, 180000)
+              console.log('[TEST] Chinese filename upload session complete')
+
+              // Calculate transfer speed
+              const chineseEndTime = Date.now()
+              const chineseDurationSeconds = (chineseEndTime - chineseStartTime) / 1000
+              const chineseSpeedMbps = (TEST_FILE_SIZE / chineseDurationSeconds) / (1024 * 1024)
+              console.log(`[TEST] Chinese filename upload speed: ${chineseSpeedMbps.toFixed(2)} MB/s`)
+            } catch (e) {
+              console.log('[TEST] Chinese filename upload timeout or error:', e.message)
+            }
+
+            // Wait for any remaining processing
+            await new Promise((_resolve) => setTimeout(_resolve, 1000))
+            console.log('[TEST] Upload test 2 complete, state:', session.state)
 
             // Exit shell
             stream.write('exit\n')

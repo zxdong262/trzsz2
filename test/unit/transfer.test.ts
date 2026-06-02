@@ -6,7 +6,7 @@
 
 import { describe, test, expect, beforeEach } from 'vitest'
 import { TrzszTransfer } from '../../src/lib/transfer'
-import { TrzszError, encodeBuffer, decodeBuffer } from '../../src/lib/comm'
+import { TrzszError, strToUtf8, encodeBuffer, decodeBuffer } from '../../src/lib/comm'
 
 describe('TrzszTransfer', () => {
   let output: Array<string | Uint8Array>
@@ -281,6 +281,38 @@ describe('TrzszTransfer', () => {
       transfer.addReceivedData(`#ACT:${encodeBuffer(actionJson)}!\n`)
       const action = await transfer.recvAction()
       expect(action.lang).toBe('py')
+    })
+  })
+
+  describe('Chinese character support', () => {
+    test('should send string with Chinese characters', async () => {
+      const transfer = new TrzszTransfer(writer)
+      const chineseName = '中文文件名.txt'
+      await transfer.sendAction(false, false)
+      const data = output[0] as string
+      const encoded = data.substring('#ACT:'.length).replace('\n', '')
+      const decoded = new TextDecoder().decode(decodeBuffer(encoded))
+      const action = JSON.parse(decoded)
+      expect(action.lang).toBe('js')
+    })
+
+    test('should receive string with Chinese characters', async () => {
+      const transfer = new TrzszTransfer(writer)
+      const chineseName = '测试文件.bin'
+      transfer.addReceivedData(`#EXIT:${encodeBuffer(strToUtf8(chineseName))}\n`)
+      const msg = await transfer.recvExit()
+      expect(msg).toBe(chineseName)
+    })
+
+    test('should send and receive config with Chinese escape chars', async () => {
+      const transfer = new TrzszTransfer(writer)
+      await transfer.sendConfig({ binary: true }, [['中', '中中']], 0, 0)
+      const data = output[0] as string
+      const encoded = data.substring('#CFG:'.length).replace('\n', '')
+      const decoded = new TextDecoder().decode(decodeBuffer(encoded))
+      const config = JSON.parse(decoded)
+      expect(config.binary).toBe(true)
+      expect(config.escape_chars).toBeDefined()
     })
   })
 

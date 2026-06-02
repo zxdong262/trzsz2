@@ -12,6 +12,7 @@ import { escapeCharsToCodes, escapeData, unescapeData } from './escape'
 import {
   trzszVersion,
   uint8ToStr,
+  strToUtf8,
   encodeBuffer,
   decodeBuffer,
   TmuxMode,
@@ -209,7 +210,7 @@ export class TrzszTransfer {
    * @param str - The string.
    */
   private async sendString (typ: string, str: string): Promise<void> {
-    await this.sendLine(typ, encodeBuffer(str))
+    await this.sendLine(typ, encodeBuffer(strToUtf8(str)))
   }
 
   /**
