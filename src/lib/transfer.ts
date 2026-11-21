@@ -401,6 +401,9 @@ export class TrzszTransfer {
     if (tmuxPaneWidth > 0) {
       config.tmux_pane_width = tmuxPaneWidth
     }
+    if ((args).mtime === true) {
+      config.mtime = true
+    }
     let jsonStr = JSON.stringify(config)
     jsonStr = jsonStr.replace(/[\u007F-\uFFFF]/g, function (chr) {
       return '\\u' + ('0000' + chr.charCodeAt(0).toString(16)).slice(-4)
@@ -638,6 +641,15 @@ export class TrzszTransfer {
   }
 
   /**
+   * Send file mtime.
+   * @param mtime - The modification time in milliseconds.
+   */
+  private async sendFileMtime (mtime: number): Promise<void> {
+    await this.sendInteger('MTIME', mtime)
+    await this.checkInteger(mtime)
+  }
+
+  /**
    * Send files.
    * @param files - The file readers.
    * @param progressCallback - The progress callback.
@@ -677,6 +689,9 @@ export class TrzszTransfer {
       await file.closeFile()
 
       await this.sendFileMD5(digest, progressCallback)
+      if (this.transferConfig.mtime === true) {
+        await this.sendFileMtime(file.getMtime?.() ?? 0)
+      }
     }
 
     return remoteNames
@@ -798,6 +813,19 @@ export class TrzszTransfer {
   }
 
   /**
+   * Receive file mtime.
+   * @return The modification time in milliseconds, or 0 if not available.
+   */
+  private async recvFileMtime (): Promise<number> {
+    if (this.transferConfig.mtime !== true) {
+      return 0
+    }
+    const mtime = await this.recvInteger('MTIME')
+    await this.sendInteger('SUCC', mtime)
+    return mtime
+  }
+
+  /**
    * Receive files.
    * @param saveParam - The save parameter.
    * @param openSaveFile - The open save file function.
@@ -852,6 +880,11 @@ export class TrzszTransfer {
       await file.closeFile()
 
       await this.recvFileMD5(digest, progressCallback)
+
+      const mtime = await this.recvFileMtime()
+      if (mtime > 0) {
+        file.setMtime?.(mtime)
+      }
     }
 
     return localNames

@@ -286,6 +286,7 @@ export interface TrzszFileReader extends TrzszFile {
   getRelPath: () => string[]
   isDir: () => boolean
   getSize: () => number
+  getMtime?: () => number
   readFile: (buf: ArrayBuffer) => Promise<Uint8Array>
 }
 
@@ -297,6 +298,7 @@ export interface TrzszFileWriter extends TrzszFile {
   getLocalName: () => string
   isDir: () => boolean
   writeFile: (buf: Uint8Array) => Promise<void>
+  setMtime?: (mtime: number) => void
   deleteFile: () => Promise<string>
 }
 

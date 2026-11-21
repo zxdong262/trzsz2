@@ -1,0 +1,60 @@
+name: Publish to npm
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+      - uses: actions/upload-artifact@v4
+        if: github.ref == 'refs/heads/main'
+        with:
+          name: npm-package
+          path: dist
+
+  publish:
+    needs: test
+    if: github.ref == 'refs/heads/main' && !contains(github.event.head_commit.message, '[skip npm]')
+    runs-on: ubuntu-24.04
+    concurrency:
+      group: npm-publish
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          registry-url: https://registry.npmjs.org/
+      - uses: actions/download-artifact@v4
+        with:
+          name: npm-package
+          path: dist
+      - name: Publish a new version
+        run: |
+          pkg=$(node -p "require('./package.json').name")
+          ver=$(node -p "require('./package.json').version")
+          status=$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' "https://registry.npmjs.org/$pkg/$ver")
+          case "$status" in
+            200) echo "$pkg@$ver already published" ;;
+            404) npm publish --access public --provenance ;;
+            *) echo "Registry returned HTTP $status" >&2; exit 1 ;;
+          esac

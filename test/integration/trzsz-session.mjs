@@ -9,7 +9,7 @@
  * SSH2 shell streams for real file transfer testing.
  */
 
-import { openSync, readSync, closeSync, existsSync, mkdirSync, createWriteStream, statSync } from 'fs'
+import { openSync, readSync, closeSync, existsSync, mkdirSync, createWriteStream, statSync, utimesSync } from 'fs'
 import { join, basename, extname } from 'path'
 import { TrzszTransfer } from '../../dist/esm/index.js'
 
@@ -50,6 +50,7 @@ class FileReader {
     this.fileName = fileName
     this.fd = null
     this.size = 0
+    this.mtime = 0
     this.offset = 0
     this.pathId = 0
     this.relPath = [fileName]
@@ -62,6 +63,7 @@ class FileReader {
   open () {
     const stats = statSync(this.filePath)
     this.size = stats.size
+    this.mtime = Math.floor(stats.mtimeMs)
     this.fd = openSync(this.filePath, 'r')
   }
 
@@ -79,6 +81,10 @@ class FileReader {
 
   getSize () {
     return this.size
+  }
+
+  getMtime () {
+    return this.mtime
   }
 
   /**
@@ -111,6 +117,7 @@ class FileWriter {
     this.localName = fileName
     this.isDirectory = false
     this.writeStream = null
+    this.mtime = 0
   }
 
   getFileName () {
@@ -142,6 +149,14 @@ class FileWriter {
   }
 
   /**
+   * Set file modification time.
+   * @param {number} mtime - Modification time in milliseconds
+   */
+  setMtime (mtime) {
+    this.mtime = mtime
+  }
+
+  /**
    * Delete the file.
    */
   async deleteFile () {
@@ -156,6 +171,15 @@ class FileWriter {
     if (this.writeStream !== null) {
       this.writeStream.close()
       this.writeStream = null
+    }
+    // Apply mtime after file is closed
+    if (this.mtime > 0) {
+      try {
+        const mtimeDate = new Date(this.mtime)
+        utimesSync(this.filePath, mtimeDate, mtimeDate)
+      } catch (err) {
+        console.error('[FileWriter] Failed to set mtime:', err.message)
+      }
     }
   }
 }

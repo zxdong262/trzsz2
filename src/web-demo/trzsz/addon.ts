@@ -39,6 +39,10 @@ class BrowserFileReader implements TrzszFileReader {
     return this.file.size
   }
 
+  getMtime (): number {
+    return this.file.lastModified
+  }
+
   async readFile (buf: ArrayBuffer): Promise<Uint8Array> {
     if (this.closed) {
       return new Uint8Array(0)
@@ -92,6 +96,10 @@ class BrowserFileWriter implements TrzszFileWriter {
   async writeFile (buf: Uint8Array): Promise<void> {
     if (this.closed) return
     this.chunks.push(new Uint8Array(buf))
+  }
+
+  setMtime (_mtime: number): void {
+    // Browser downloads don't support setting mtime
   }
 
   async deleteFile (): Promise<string> {
