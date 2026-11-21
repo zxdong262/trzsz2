@@ -58,7 +58,7 @@ export class TrzszTransfer {
    */
   public cleanup (): void {
     for (const file of this.openedFiles) {
-      file.closeFile()
+      void Promise.resolve(file.closeFile()).catch(console.warn)
     }
   }
 
@@ -305,22 +305,25 @@ export class TrzszTransfer {
     escapeCodes: number[][],
     timeoutInMilliseconds: number
   ): Promise<Uint8Array> {
-    return await Promise.race<Uint8Array>([
-      new Promise<Uint8Array>((_resolve, reject) =>
-        setTimeout(() => {
-          this.cleanTimeoutInMilliseconds = 3000
-          reject(new TrzszError('Receive data timeout'))
-        }, timeoutInMilliseconds)
-      ),
-      (async () => {
-        if (!binary) {
-          return await this.recvBinary('DATA')
-        }
-        const size = await this.recvInteger('DATA')
-        const data = await this.buffer.readBinary(size)
-        return unescapeData(data, escapeCodes)
-      })()
-    ])
+    const receive = async (): Promise<Uint8Array> => {
+      if (!binary) return await this.recvBinary('DATA')
+      const size = await this.recvInteger('DATA')
+      return unescapeData(await this.buffer.readBinary(size), escapeCodes)
+    }
+    if (timeoutInMilliseconds <= 0) return await receive()
+
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const timeout = new Promise<never>((_resolve, reject) => {
+      timer = setTimeout(() => {
+        this.cleanTimeoutInMilliseconds = 3000
+        reject(new TrzszError('Receive data timeout'))
+      }, timeoutInMilliseconds)
+    })
+    try {
+      return await Promise.race([receive(), timeout])
+    } finally {
+      clearTimeout(timer)
+    }
   }
 
   /**
@@ -671,7 +674,7 @@ export class TrzszTransfer {
       await this.sendFileSize(size, progressCallback)
 
       const digest = await this.sendFileData(file, size, binary, escapeCodes, maxBufSize, progressCallback)
-      file.closeFile()
+      await file.closeFile()
 
       await this.sendFileMD5(digest, progressCallback)
     }
@@ -846,7 +849,7 @@ export class TrzszTransfer {
         timeoutInMilliseconds,
         progressCallback
       )
-      file.closeFile()
+      await file.closeFile()
 
       await this.recvFileMD5(digest, progressCallback)
     }

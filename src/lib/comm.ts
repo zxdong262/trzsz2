@@ -275,7 +275,7 @@ export class TrzszError extends Error {
  * Interface for trzsz file operations.
  */
 export interface TrzszFile {
-  closeFile: () => void
+  closeFile: () => void | Promise<void>
 }
 
 /**

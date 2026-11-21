@@ -4,7 +4,7 @@
  * @license MIT
  */
 
-import { describe, test, expect, beforeEach } from 'vitest'
+import { describe, test, expect, beforeEach, vi } from 'vitest'
 import { TrzszTransfer } from '../../src/lib/transfer'
 import { TrzszError, strToUtf8, encodeBuffer, decodeBuffer } from '../../src/lib/comm'
 
@@ -68,6 +68,30 @@ describe('TrzszTransfer', () => {
       await transfer.stopTransferring()
       // Should not throw
     })
+  })
+
+  test('releases the data timeout after both success and protocol errors', async () => {
+    vi.useFakeTimers()
+    try {
+      for (const frame of [`#DATA:${encodeBuffer('x')}\n`, 'invalid\n']) {
+        const transfer = new TrzszTransfer(writer)
+        transfer.addReceivedData(`#NUM:1\n#NAME:${encodeBuffer('x')}\n#SIZE:1\n${frame}`)
+        // An invalid checksum ends the successful DATA case after the chunk.
+        transfer.addReceivedData(`#MD5:${encodeBuffer('wrong')}\n`)
+        const file = {
+          getFileName: () => 'x',
+          getLocalName: () => 'x',
+          isDir: () => false,
+          writeFile: async () => {},
+          closeFile: () => {},
+          deleteFile: async () => 'x'
+        }
+        await expect(transfer.recvFiles(null, async () => file, null)).rejects.toThrow()
+        expect(vi.getTimerCount()).toBe(0)
+      }
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   describe('sendAction', () => {

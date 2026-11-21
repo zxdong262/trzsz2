@@ -16,56 +16,33 @@
  * - Does NOT delete files after test
  */
 
+import { randomUUID } from 'node:crypto'
 import { Client } from '@electerm/ssh2'
 import { existsSync, mkdirSync } from 'fs'
 import { join } from 'path'
 import { TrzszSession } from './trzsz-session.mjs'
-import { SSH_CONFIG } from './common.mjs'
+import { SSH_CONFIG, verifyTransferredFile } from './common.mjs'
 
 // Download directory
 const DOWNLOAD_DIR = join(process.cwd(), 'test/integration/downloads')
 
-// Generate timestamp for unique filename
-const timestamp = Date.now()
+const runId = `${Date.now()}-${randomUUID()}`
 
 // File to download from server (with timestamp in name)
-const DOWNLOAD_FILE_NAME = `download_test_${timestamp}.bin`
+const DOWNLOAD_FILE_NAME = `download_test_${runId}.bin`
 
 // Chinese filename for testing Unicode support
-const CHINESE_FILE_NAME = `测试文件_${timestamp}.bin`
+const CHINESE_FILE_NAME = `测试文件_${runId}.bin`
 
 // File size (5MB)
 const TEST_FILE_SIZE = 5 * 1024 * 1024
-
-/**
- * Wait for session to complete with timeout.
- * @param {TrzszSession} session - Session to monitor
- * @param {number} timeout - Timeout in milliseconds
- */
-function waitForComplete (session, timeout = 120000) {
-  return new Promise((resolve, reject) => {
-    const startTime = Date.now()
-    const checkInterval = setInterval(() => {
-      if (session.sessionComplete) {
-        clearInterval(checkInterval)
-        resolve(true)
-      } else if (session.error) {
-        clearInterval(checkInterval)
-        reject(session.error)
-      } else if (Date.now() - startTime > timeout) {
-        clearInterval(checkInterval)
-        reject(new Error(`Timeout waiting for session complete, current state: ${session.state}`))
-      }
-    }, 500)
-  })
-}
 
 /**
  * Run SSH connection and trzsz download test.
  */
 async function runTest () {
   console.log('=== SSH trzsz Download Test ===')
-  console.log('SSH Config:', { ...SSH_CONFIG, password: '***' })
+  console.log('SSH target:', SSH_CONFIG.host, SSH_CONFIG.port, SSH_CONFIG.username)
   console.log('')
 
   // Ensure download directory exists
@@ -151,11 +128,13 @@ async function runTest () {
           }
         })
 
+        let finished = false
         stream.on('close', () => {
           console.log('[SSH] Stream closed')
           session.cleanup()
           conn.end()
-          resolve(true)
+          if (finished) resolve(true)
+          else reject(new Error('SSH stream closed before both transfers completed'))
         })
 
         stream.stderr.on('data', (data) => {
@@ -193,18 +172,14 @@ async function runTest () {
             stream.write(`tsz ${DOWNLOAD_FILE_NAME}\n`)
 
             // Wait for download to complete with timeout
-            try {
-              await waitForComplete(session, 180000)
-              console.log('[TEST] Download session complete')
+            await session.waitForComplete(180000)
+            console.log('[TEST] Download session complete')
 
-              // Calculate transfer speed
-              const endTime = Date.now()
-              const durationSeconds = (endTime - startTime) / 1000
-              const speedMbps = (TEST_FILE_SIZE / durationSeconds) / (1024 * 1024)
-              console.log(`[TEST] Download speed: ${speedMbps.toFixed(2)} MB/s`)
-            } catch (e) {
-              console.log('[TEST] Download timeout or error:', e.message)
-            }
+            // Calculate transfer speed
+            const endTime = Date.now()
+            const durationSeconds = (endTime - startTime) / 1000
+            const speedMbps = (TEST_FILE_SIZE / durationSeconds) / (1024 * 1024)
+            console.log(`[TEST] Download speed: ${speedMbps.toFixed(2)} MB/s`)
 
             // Wait for any remaining processing
             await new Promise((_resolve) => setTimeout(_resolve, 1000))
@@ -227,24 +202,24 @@ async function runTest () {
             stream.write(`tsz ${CHINESE_FILE_NAME}\n`)
 
             // Wait for download to complete with timeout
-            try {
-              await waitForComplete(session, 180000)
-              console.log('[TEST] Chinese filename download session complete')
+            await session.waitForComplete(180000)
+            console.log('[TEST] Chinese filename download session complete')
 
-              // Calculate transfer speed
-              const chineseEndTime = Date.now()
-              const chineseDurationSeconds = (chineseEndTime - chineseStartTime) / 1000
-              const chineseSpeedMbps = (TEST_FILE_SIZE / chineseDurationSeconds) / (1024 * 1024)
-              console.log(`[TEST] Chinese filename download speed: ${chineseSpeedMbps.toFixed(2)} MB/s`)
-            } catch (e) {
-              console.log('[TEST] Chinese filename download timeout or error:', e.message)
-            }
+            // Calculate transfer speed
+            const chineseEndTime = Date.now()
+            const chineseDurationSeconds = (chineseEndTime - chineseStartTime) / 1000
+            const chineseSpeedMbps = (TEST_FILE_SIZE / chineseDurationSeconds) / (1024 * 1024)
+            console.log(`[TEST] Chinese filename download speed: ${chineseSpeedMbps.toFixed(2)} MB/s`)
 
             // Wait for any remaining processing
             await new Promise((_resolve) => setTimeout(_resolve, 1000))
             console.log('[TEST] Download test 2 complete, state:', session.state)
 
             // Exit shell
+            for (const name of [DOWNLOAD_FILE_NAME, CHINESE_FILE_NAME]) {
+              await verifyTransferredFile(conn, join(DOWNLOAD_DIR, name), name, TEST_FILE_SIZE)
+            }
+            finished = true
             stream.write('exit\n')
           } catch (err) {
             console.error('[TEST] Error:', err)
