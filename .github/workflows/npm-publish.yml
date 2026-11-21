@@ -22,6 +22,10 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npm run build
+      - name: Verify published entry points
+        run: |
+          node --input-type=module -e "import { TrzszTransfer } from 'trzsz2'; if (!TrzszTransfer) process.exit(1)"
+          node -e "require('trzsz2'); require('fs').accessSync(require('./package.json').types)"
       - uses: actions/upload-artifact@v4
         if: github.ref == 'refs/heads/main'
         with:

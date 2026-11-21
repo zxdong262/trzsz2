@@ -12,7 +12,7 @@ export default defineConfig({
     dts({
       include: ['src/lib/*'],
       outDir: 'dist/esm',
-      entryRoot: 'src',
+      entryRoot: 'src/lib',
       rollupTypes: false,
       tsconfigPath: './tsconfig.json'
     })
